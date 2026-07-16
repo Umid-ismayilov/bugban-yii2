@@ -35,6 +35,36 @@ class Bootstrap implements BootstrapInterface
             return; // no-op when no API key is configured
         }
 
+        // Metadata for the one-time install ping (SDK handshake).
+        if (!isset($params['framework'])) {
+            $params['framework'] = 'yii2';
+        }
+        if (!isset($params['framework_version'])) {
+            try {
+                if (class_exists('Yii') && method_exists('Yii', 'getVersion')) {
+                    $params['framework_version'] = \Yii::getVersion();
+                }
+            } catch (\Exception $e) {
+                // ignore
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+        if (!isset($params['app_name'])) {
+            try {
+                if (isset($app->name) && is_string($app->name) && $app->name !== '') {
+                    $params['app_name'] = $app->name;
+                }
+            } catch (\Exception $e) {
+                // ignore
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+        if (!isset($params['sdk'])) {
+            $params['sdk'] = 'bugban/yii2';
+        }
+
         Bugban::init($params);
     }
 }
