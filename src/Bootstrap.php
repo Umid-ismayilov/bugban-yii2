@@ -66,5 +66,66 @@ class Bootstrap implements BootstrapInterface
         }
 
         Bugban::init($params);
+        $this->registerQueryCapture($app, $params);
+    }
+
+    /**
+     * Slow-query capture: read Yii's built-in DB profiling at the end of the
+     * request (EVENT_AFTER_REQUEST fires before the logger flushes, so the
+     * profiling messages are still in memory). Durations are seconds -> ms;
+     * the SDK drops anything faster than the configured slow_query_ms.
+     * Fully guarded — never throws, never breaks the host app.
+     *
+     * @param \yii\base\Application $app
+     * @param array $params
+     * @return void
+     */
+    private function registerQueryCapture($app, array $params)
+    {
+        try {
+            if (isset($params['capture_queries']) && !$params['capture_queries']) {
+                return;
+            }
+            if (!is_object($app) || !method_exists($app, 'on')) {
+                return;
+            }
+            $app->on(\yii\base\Application::EVENT_AFTER_REQUEST, function () {
+                try {
+                    if (!class_exists('Yii', false)) {
+                        return;
+                    }
+                    $logger = \Yii::getLogger();
+                    if (!is_object($logger) || !method_exists($logger, 'getProfiling')) {
+                        return;
+                    }
+                    $profiling = $logger->getProfiling(array('yii\db\Command::query', 'yii\db\Command::execute'));
+                    if (!is_array($profiling)) {
+                        return;
+                    }
+                    foreach ($profiling as $entry) {
+                        if (!isset($entry['info'], $entry['duration'])) {
+                            continue;
+                        }
+                        $meta = array();
+                        // Logger traces (when traceLevel > 0) give us the app caller.
+                        if (isset($entry['trace'][0]['file']) && is_string($entry['trace'][0]['file'])) {
+                            $meta['file'] = $entry['trace'][0]['file'];
+                            if (isset($entry['trace'][0]['line'])) {
+                                $meta['line'] = $entry['trace'][0]['line'];
+                            }
+                        }
+                        Bugban::recordQuery((string) $entry['info'], ((float) $entry['duration']) * 1000, $meta);
+                    }
+                } catch (\Exception $e) {
+                    // never break the host app
+                } catch (\Throwable $e) {
+                    // non-fatal
+                }
+            });
+        } catch (\Exception $e) {
+            // never break the host app
+        } catch (\Throwable $e) {
+            // non-fatal
+        }
     }
 }

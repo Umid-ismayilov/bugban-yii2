@@ -30,9 +30,22 @@ return [
             'api_key' => 'bb_xxx',
             'host' => 'https://bugban.online',
             'environment' => 'production',
+            // 'capture_queries' => true,   // slow-query monitoring (default: on)
+            // 'slow_query_ms' => 1000,     // report queries slower than this (ms)
         ],
     ],
 ];
+```
+
+**Slow query monitoring** — automatic: at the end of each request the
+extension reads Yii's built-in DB profiling (`yii\db\Command::query` /
+`::execute`, enabled by default via `Connection::$enableProfiling`) and
+reports queries slower than `slow_query_ms` to Bugban in one non-blocking
+batch. Works with any Yii2 DB driver (MySQL, PostgreSQL, SQLite, ...). You
+can also record manually:
+
+```php
+\Bugban\Sdk\Bugban::recordQuery($sql, $durationMs, ['connection' => 'mysql']);
 ```
 
 ## Configure — console app (`config/console.php`)
@@ -86,5 +99,7 @@ Bugban::captureMessage('Something noteworthy happened', 'warning');
 | `release`          | string  | `null`                  |
 | `enabled`          | bool    | `true`                  |
 | `capture_requests` | bool    | `false`                 |
+| `capture_queries`  | bool    | `true`                  |
+| `slow_query_ms`    | int     | `1000`                  |
 | `sample_rate`      | float   | `1.0`                   |
 | `redact`           | array   | `[]`                    |
