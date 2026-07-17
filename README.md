@@ -103,3 +103,26 @@ Bugban::captureMessage('Something noteworthy happened', 'warning');
 | `slow_query_ms`    | int     | `1000`                  |
 | `sample_rate`      | float   | `1.0`                   |
 | `redact`           | array   | `[]`                    |
+| `capture_logs`     | bool    | `false`                 |
+| `log_level`        | string  | `error`                 |
+
+## Log capture (errors logged but not thrown)
+
+Errors you catch and log without re-throwing only reach the log file. Enable
+`capture_logs` and forward them to Bugban with `recordLog()`:
+
+```php
+// In the component config (see above), add:
+//   'capture_logs' => true,
+//   'log_level'    => 'error',
+
+// Anywhere you'd log an error (e.g. a Yii::error wrapper or directly):
+\Bugban\Sdk\Bugban::recordLog('error', 'Queue job failed', ['job' => $id]);
+
+// Caught-and-logged throwable (attach it for a full stacktrace):
+try { risky(); } catch (\Throwable $e) {
+    \Bugban\Sdk\Bugban::recordLog('error', $e->getMessage(), ['exception' => $e]);
+}
+```
+
+Records below `log_level` are dropped; context is redacted; `recordLog()` never throws.
