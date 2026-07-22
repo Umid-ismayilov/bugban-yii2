@@ -67,6 +67,48 @@ class Bootstrap implements BootstrapInterface
 
         Bugban::init($params);
         $this->registerQueryCapture($app, $params);
+        $this->registerQueryRunner($app);
+    }
+
+    /**
+     * Let the Bugban panel re-run one of this app's own captured SELECTs and
+     * report the timing, so a developer can confirm an index actually helped.
+     * Runs on Yii's own connection inside a transaction that is always rolled
+     * back, and returns only the row COUNT — no row data ever leaves here.
+     *
+     * @param \yii\base\Application $app
+     * @return void
+     */
+    private function registerQueryRunner($app)
+    {
+        try {
+            if (!is_object($app) || !isset($app->db)) {
+                return;
+            }
+            $db = $app->db;
+            Bugban::setQueryRunner(function ($sql, array $bindings) use ($db) {
+                $transaction = $db->beginTransaction();
+                try {
+                    $rows = $db->createCommand($sql, $bindings)->queryAll();
+
+                    return is_array($rows) ? count($rows) : 0;
+                } catch (\Exception $e) {
+                    throw $e;
+                } catch (\Throwable $e) {
+                    throw $e;
+                } finally {
+                    try {
+                        $transaction->rollBack();
+                    } catch (\Exception $e) {
+                        // Nothing was written; a failed rollback is not fatal.
+                    }
+                }
+            });
+        } catch (\Exception $e) {
+            // Monitoring must never break the app.
+        } catch (\Throwable $e) {
+            // Same for engine errors.
+        }
     }
 
     /**
