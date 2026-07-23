@@ -86,6 +86,12 @@ class Bootstrap implements BootstrapInterface
                 return;
             }
             $db = $app->db;
+            // The core SDK may be older than this adapter (stale lock file or a
+            // manual libs/ copy loaded first). Never call into it blindly.
+            if (!method_exists('\\Bugban\\Sdk\\Bugban', 'setQueryRunner')) {
+                return;
+            }
+
             Bugban::setQueryRunner(function ($sql, array $bindings) use ($db) {
                 $transaction = $db->beginTransaction();
                 try {
