@@ -92,12 +92,15 @@ class Bootstrap implements BootstrapInterface
                 return;
             }
 
-            Bugban::setQueryRunner(function ($sql, array $bindings) use ($db) {
+            Bugban::setQueryRunner(function ($sql, array $bindings, $returnRows = false) use ($db) {
                 $transaction = $db->beginTransaction();
                 try {
                     $rows = $db->createCommand($sql, $bindings)->queryAll();
+                    if (!is_array($rows)) {
+                        return $returnRows ? array() : 0;
+                    }
 
-                    return is_array($rows) ? count($rows) : 0;
+                    return $returnRows ? $rows : count($rows);
                 } catch (\Exception $e) {
                     throw $e;
                 } catch (\Throwable $e) {
