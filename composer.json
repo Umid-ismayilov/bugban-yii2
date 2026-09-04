@@ -2,7 +2,14 @@
     "name": "bugban/yii2",
     "description": "Bugban error & monitoring SDK — Yii2 extension that auto-captures exceptions.",
     "type": "yii2-extension",
-    "keywords": ["bugban", "yii2", "yii", "error-tracking", "monitoring", "exceptions"],
+    "keywords": [
+        "bugban",
+        "yii2",
+        "yii",
+        "error-tracking",
+        "monitoring",
+        "exceptions"
+    ],
     "license": "MIT",
     "require": {
         "php": ">=7.0",
@@ -24,5 +31,10 @@
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "homepage": "https://bugban.online",
+    "support": {
+        "issues": "https://github.com/Umid-ismayilov/bugban-php-sdk/issues",
+        "docs": "https://bugban.online/integrations/yii2"
+    }
 }
