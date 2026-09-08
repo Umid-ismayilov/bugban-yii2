@@ -13,7 +13,7 @@
     "license": "MIT",
     "require": {
         "php": ">=7.0",
-        "bugban/php-sdk": "^1.7.0",
+        "bugban/php-sdk": "^1.7.1",
         "yiisoft/yii2": ">=2.0"
     },
     "repositories": [
