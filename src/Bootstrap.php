@@ -68,6 +68,85 @@ class Bootstrap implements BootstrapInterface
         Bugban::init($params);
         $this->registerQueryCapture($app, $params);
         $this->registerQueryRunner($app);
+        $this->registerRunAttribution($app);
+    }
+
+    /**
+     * Per-run attribution for console commands and yii2-queue jobs: the core
+     * records one run per process (duration, CPU, memory, query time) and
+     * needs the command / job class name to label it. Everything is guarded —
+     * an older core without these methods is simply left alone.
+     *
+     * @param \yii\base\Application $app
+     * @return void
+     */
+    private function registerRunAttribution($app)
+    {
+        try {
+            if (!is_object($app) || !method_exists($app, 'on')) {
+                return;
+            }
+            if (!method_exists('\\Bugban\\Sdk\\Bugban', 'setCommand')) {
+                return;
+            }
+            if (class_exists('yii\\console\\Application', false) && $app instanceof \yii\console\Application) {
+                $app->on(\yii\base\Controller::EVENT_BEFORE_ACTION, function ($event) {
+                    try {
+                        if (isset($event->action) && method_exists($event->action, 'getUniqueId')) {
+                            Bugban::setCommand((string) $event->action->getUniqueId());
+                        }
+                    } catch (\Exception $e) {
+                        // ignore
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                });
+            }
+            // yii2-queue: one run per executed job, like a Laravel queue job.
+            if (class_exists('yii\\queue\\Queue') && method_exists('\\Bugban\\Sdk\\Bugban', 'beginJob')) {
+                \yii\base\Event::on('yii\\queue\\Queue', 'beforeExec', function ($event) {
+                    try {
+                        $class = isset($event->job) && is_object($event->job) ? get_class($event->job) : 'yii2-queue job';
+                        $meta = array('kind' => 'yii2-queue');
+                        if (isset($event->attempt)) {
+                            $meta['attempts'] = (int) $event->attempt;
+                        }
+                        Bugban::beginJob($class, $meta);
+                        Bugban::setRunSource('queue');
+                    } catch (\Exception $e) {
+                        // ignore
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                });
+                \yii\base\Event::on('yii\\queue\\Queue', 'afterExec', function ($event) {
+                    try {
+                        Bugban::endJob(0);
+                    } catch (\Exception $e) {
+                        // ignore
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                });
+                \yii\base\Event::on('yii\\queue\\Queue', 'afterError', function ($event) {
+                    try {
+                        $err = null;
+                        if (isset($event->error) && is_object($event->error)) {
+                            $err = get_class($event->error) . ': ' . $event->error->getMessage();
+                        }
+                        Bugban::endJob(1, $err);
+                    } catch (\Exception $e) {
+                        // ignore
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                });
+            }
+        } catch (\Exception $e) {
+            // Monitoring must never break the app.
+        } catch (\Throwable $e) {
+            // Same for engine errors.
+        }
     }
 
     /**

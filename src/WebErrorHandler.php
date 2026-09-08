@@ -23,7 +23,13 @@ class WebErrorHandler extends \yii\web\ErrorHandler
         parent::logException($exception);
 
         try {
-            Bugban::capture($exception);
+            // Reached Yii's error handler = nobody caught it → unhandled.
+            // Guarded: an older core without captureUnhandled() degrades to capture().
+            if (method_exists('Bugban\\Sdk\\Bugban', 'captureUnhandled')) {
+                Bugban::captureUnhandled($exception);
+            } else {
+                Bugban::capture($exception);
+            }
         } catch (\Exception $e) {
             // never let reporting break Yii's own error handling
         } catch (\Throwable $e) {
