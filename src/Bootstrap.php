@@ -19,6 +19,9 @@ use yii\base\BootstrapInterface;
  */
 class Bootstrap implements BootstrapInterface
 {
+    /** Package version, reported in the SDK ping (keep in step with the core's Bugban::VERSION). */
+    const VERSION = '1.7.4';
+
     /**
      * @param \yii\base\Application $app
      * @return void
@@ -63,6 +66,9 @@ class Bootstrap implements BootstrapInterface
         }
         if (!isset($params['sdk'])) {
             $params['sdk'] = 'bugban/yii2';
+        }
+        if ($params['sdk'] === 'bugban/yii2' && !isset($params['sdk_version'])) {
+            $params['sdk_version'] = self::VERSION;
         }
 
         Bugban::init($params);
