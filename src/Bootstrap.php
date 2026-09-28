@@ -20,7 +20,7 @@ use yii\base\BootstrapInterface;
 class Bootstrap implements BootstrapInterface
 {
     /** Package version, reported in the SDK ping (keep in step with the core's Bugban::VERSION). */
-    const VERSION = '1.7.5';
+    const VERSION = '1.7.6';
 
     /**
      * @param \yii\base\Application $app
