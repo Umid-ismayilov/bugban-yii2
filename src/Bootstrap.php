@@ -20,7 +20,7 @@ use yii\base\BootstrapInterface;
 class Bootstrap implements BootstrapInterface
 {
     /** Package version, reported in the SDK ping (keep in step with the core's Bugban::VERSION). */
-    const VERSION = '1.7.7';
+    const VERSION = '1.7.8';
 
     /**
      * @param \yii\base\Application $app
@@ -108,63 +108,7 @@ class Bootstrap implements BootstrapInterface
      */
     public static function resolveUser($app)
     {
-        try {
-            if (!is_object($app) || !class_exists('yii\\web\\User') || !method_exists($app, 'getComponents')) {
-                return null;
-            }
-            $ids = array();
-            foreach ($app->getComponents(true) as $id => $def) {
-                $class = is_object($def) ? get_class($def)
-                    : (is_array($def) && isset($def['class']) ? $def['class'] : (is_string($def) ? $def : null));
-                $class = is_string($class) ? ltrim($class, '\\') : null;
-                if (is_string($class) && ($class === 'yii\\web\\User' || is_subclass_of($class, 'yii\\web\\User'))) {
-                    $ids[] = $id;
-                }
-            }
-            // "user" first — it is the app's own notion of "logged in".
-            usort($ids, function ($a, $b) {
-                return ($a === 'user' ? 0 : 1) - ($b === 'user' ? 0 : 1);
-            });
-
-            $session = null;
-            if ($app->has('session', true)) {
-                $session = $app->get('session');
-            }
-            foreach ($ids as $id) {
-                $component = $app->get($id);
-                // Already loaded this request: free. Otherwise only when its
-                // session key is present — never start sessions or send cookies.
-                $identity = $component->getIdentity(false);
-                if ($identity === null && is_object($session) && $session->getIsActive()
-                    && isset($component->idParam) && $session->has($component->idParam)) {
-                    $identity = $component->getIdentity();
-                }
-                if (!is_object($identity)) {
-                    continue;
-                }
-                $email = isset($identity->email) ? $identity->email : null;
-                $name = null;
-                foreach (array('username', 'name', 'full_name', 'login') as $f) {
-                    if (isset($identity->$f)) {
-                        $name = $identity->$f;
-                        break;
-                    }
-                }
-
-                return array(
-                    'id' => method_exists($identity, 'getId') ? $identity->getId() : null,
-                    'email' => is_scalar($email) ? $email : null,
-                    'name' => is_scalar($name) ? $name : null,
-                    'guard' => $id,
-                );
-            }
-        } catch (\Exception $e) {
-            // ignore
-        } catch (\Throwable $e) {
-            // ignore
-        }
-
-        return null;
+        return \Bugban\Sdk\Support\YiiAuth::forApp($app);
     }
 
     /**
